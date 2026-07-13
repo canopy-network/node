@@ -36,10 +36,7 @@ status: ## Show container status
 	$(COMPOSE) ps
 
 validate: ## Validate Caddyfile + compose file
-	docker run --rm -e DOMAIN=$${DOMAIN:-localhost} -e ACME_EMAIL=$${ACME_EMAIL:-x@x.co} \
-		-e AUTH_USER=$${AUTH_USER:-canopy} -e AUTH_PASSWORDHASH='$${AUTH_PASSWORDHASH}' \
-		-v $$(pwd)/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
-		caddy:2.10-alpine caddy validate --config /etc/caddy/Caddyfile
+	$(COMPOSE) run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile
 	$(COMPOSE) config -q && echo "compose OK"
 
 monitoring-up: ## Start with the monitoring profile (prometheus + grafana)

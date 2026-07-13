@@ -44,12 +44,12 @@ Let's Encrypt.
 ## Repo layout
 
 ```
-caddy/Caddyfile        # all routing — one file for local AND production
-docker-compose.yml     # node + caddy (+ monitoring profile)
-config/                # node config + genesis (bind-mounted into the node)
-data/                  # runtime state (keys, chain db), gitignored
-scripts/               # setup, init-keys, snapshot
-monitoring/            # prometheus, grafana provisioning, loki, promtail
+docker-compose.yml            # node
+docker-compose.monitoring.yml # caddy (Caddyfile inlined via `configs:`) + monitoring stack
+config/                       # node config + genesis (bind-mounted into the node)
+data/                         # runtime state (keys, chain db), gitignored
+scripts/                      # setup, init-keys, snapshot
+monitoring/                   # grafana dashboards (all other configs inlined via `configs:`)
 ```
 
 ## Operations
