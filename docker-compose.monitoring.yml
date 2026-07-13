@@ -23,8 +23,10 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml"]
     expose:
       - "9090"
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
     volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
 
   grafana:
@@ -38,10 +40,12 @@ services:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+    configs:
+      - source: grafana_datasources
+        target: /etc/grafana/provisioning/datasources/automatic.yaml
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
 
   loki:
     image: grafana/loki:3.4.4
@@ -51,8 +55,10 @@ services:
     # served through caddy at https://loki.<DOMAIN> (basic-auth)
     expose:
       - "3100"
+    configs:
+      - source: loki_config
+        target: /etc/loki/config.yaml
     volumes:
-      - ./monitoring/loki/config.yaml:/etc/loki/config.yaml:ro
       # /loki is pre-owned by the loki user in the image, so a fresh named
       # volume inherits the right permissions (uid 10001)
       - loki-data:/loki
@@ -66,9 +72,12 @@ services:
       - --server.http.listen-addr=0.0.0.0:12345
       - --storage.path=/var/lib/alloy/data
       - /etc/alloy/config.alloy
+    configs:
+      - source: alloy_config
+        target: /etc/alloy/config.alloy
     volumes:
-      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
 
 volumes:
   caddy-data:
@@ -76,3 +85,100 @@ volumes:
   prometheus-data:
   grafana-data:
   loki-data:
+  alloy-data:
+
+configs:
+  prometheus_config:
+    content: |
+      global:
+        scrape_interval: 15s
+
+      scrape_configs:
+        - job_name: canopy-nodes
+          static_configs:
+            - targets: ["node:9090"]
+
+        - job_name: prometheus
+          static_configs:
+            - targets: ["localhost:9090"]
+
+  grafana_datasources:
+    content: |
+      apiVersion: 1
+      datasources:
+
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus:9090
+          isDefault: true
+          editable: true
+
+
+        - name: Loki
+          type: loki
+          access: proxy
+          url: http://loki:3100
+
+  loki_config:
+    content: |
+      auth_enabled: false
+
+      server:
+        http_listen_port: 3100
+
+      common:
+        instance_addr: 127.0.0.1
+        path_prefix: /loki
+        storage:
+          filesystem:
+            chunks_directory: /loki/chunks
+            rules_directory: /loki/rules
+        replication_factor: 1
+        ring:
+          kvstore:
+            store: inmemory
+
+      schema_config:
+        configs:
+          - from: 2020-10-24
+            store: tsdb
+            object_store: filesystem
+            schema: v13
+            index:
+              prefix: index_
+              period: 24h
+
+  alloy_config:
+    content: |
+      discovery.docker "containers" {
+      	host             = "unix:///var/run/docker.sock"
+      	refresh_interval = "15s"
+
+      	filter {
+      		name   = "name"
+      		values = ["node", "caddy", "prometheus", "grafana", "loki", "alloy"]
+      	}
+      }
+
+      discovery.relabel "containers" {
+      	targets = discovery.docker.containers.targets
+
+      	rule {
+      		source_labels = ["__meta_docker_container_name"]
+      		regex         = "/(.*)"
+      		target_label  = "container"
+      	}
+      }
+
+      loki.source.docker "containers" {
+      	host       = "unix:///var/run/docker.sock"
+      	targets    = discovery.relabel.containers.output
+      	forward_to = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+      	endpoint {
+      		url = "http://loki:3100/loki/api/v1/push"
+      	}
+      }
