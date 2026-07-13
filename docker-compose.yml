@@ -1,0 +1,106 @@
+services:
+  node:
+    image: canopynetwork/canopy:latest
+    container_name: node
+    restart: unless-stopped
+    command: ["start"]
+    ports:
+      - "9001:9001" # TCP P2P
+    expose:
+      - "50000" # Wallet
+      - "50001" # Explorer
+      - "50002" # RPC
+      - "50003" # Admin RPC
+    volumes:
+      - ./data:/root/.canopy
+      - ./config/genesis.json:/root/.canopy/genesis.json
+      - ./config/config.json:/root/.canopy/config.json
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+      AUTH_USER: ${AUTH_USER:?set AUTH_USER in .env}
+      AUTH_PASSWORDHASH: ${AUTH_PASSWORDHASH:?run 'make hash-password' and set AUTH_PASSWORDHASH in .env}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  # ------------------------- monitoring (opt-in) --------------------------
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: prometheus
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    expose:
+      - "9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    container_name: grafana
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    # served through caddy at https://monitoring.<DOMAIN> — not published
+    expose:
+      - "3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER:-admin}
+      # guarded by `make monitoring-up` (compose interpolates this even when
+      # the profile is inactive, so :? here would block the core stack)
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+
+  loki:
+    image: grafana/loki:3.4.4
+    container_name: loki
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command: ["--config.file=/etc/loki/config.yaml"]
+    # served through caddy at https://loki.<DOMAIN> (basic-auth) — not published
+    expose:
+      - "3100"
+    volumes:
+      - ./monitoring/loki/config.yaml:/etc/loki/config.yaml:ro
+      # /loki is pre-owned by the loki user in the image, so a fresh named
+      # volume inherits the right permissions (uid 10001)
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.4.4
+    container_name: promtail
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command: ["--config.file=/etc/promtail/config.yaml"]
+    volumes:
+      - ./monitoring/promtail/config.yaml:/etc/promtail/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail-data:/run/promtail
+
+volumes:
+  caddy-data:
+  caddy-config:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  promtail-data:

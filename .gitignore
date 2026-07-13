@@ -1,0 +1,10 @@
+# runtime state — NEVER tracked (git pull must never touch a live node)
+data/*
+!data/.gitkeep
+
+# operator config/secrets
+.env
+
+# local tooling litter
+*.bak
+snapshot*.tar.gz

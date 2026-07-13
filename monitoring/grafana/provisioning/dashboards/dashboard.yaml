@@ -1,0 +1,17 @@
+apiVersion: 1
+
+providers:
+  - name: "Dashboard provider"
+    orgId: 1
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: true
+      folders:
+        - name: Canopy
+          path: /etc/grafana/dashboards/canopy
+        - name: Infrastructure
+          path: /etc/grafana/dashboards/infrastructure
