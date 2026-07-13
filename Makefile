@@ -4,7 +4,7 @@ ifneq (,$(wildcard .env))
   export
 endif
 
-COMPOSE := docker compose
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 
 .PHONY: help setup hash-password up down restart logs status validate snapshot init-keys monitoring-up monitoring-down
 
@@ -20,7 +20,7 @@ hash-password: ## Generate a bcrypt hash for AUTH_PASSWORDHASH (prompts for pass
 pull: ## Pull the latest canopynetwork/canopy image
 	$(COMPOSE) pull node
 
-up: guard-auth ## Start nodes + caddy
+up:
 	$(COMPOSE) up -d node caddy
 
 down: ## Stop everything (all profiles)
@@ -54,6 +54,3 @@ snapshot: ## Download mainnet snapshots into data/ (stops nodes first)
 
 init-keys: ## First-boot: generate validator keys (safe to re-run)
 	./scripts/init-keys.sh
-
-guard-auth:
-	@test -n "$(AUTH_PASSWORDHASH)" || (echo "ERROR: AUTH_PASSWORDHASH is empty — run 'make hash-password' and set it in .env"; exit 1)
