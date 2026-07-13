@@ -1,33 +1,9 @@
-# Canopy node edge — Caddy v2
-#
-# One file for local AND production:
-#   DOMAIN=localhost        -> wallet.localhost etc., Caddy issues internal certs
-#   DOMAIN=example.com      -> public hostnames, automatic HTTPS
-
-# URL scheme:
-#   https://wallet.$DOMAIN/     wallet    (basic-auth)
-#   https://explorer.$DOMAIN/   explorer
-#   https://rpc.$DOMAIN/        RPC       (root answers /v1/eth for MetaMask)
-#   https://adminrpc.$DOMAIN/   admin RPC (basic-auth)
-#
-# Every UI host also serves /rpc and /adminrpc same-origin: the node config
-# uses relative URLs ("rpcURL": "/rpc", "adminRPCUrl": "/adminrpc"), so the
-# UIs call their own origin — one basic-auth login covers the page and its
-# API requests, and CORS never enters the picture.
-#
-# Admin API split (canopy): /v1/tx & friends are served by the RPC port
-# (50002); only /v1/admin/* remains on the admin port (50003).
-
 {
 	email {$ACME_EMAIL}
 	servers {
 		metrics
 	}
 }
-
-# ---------------------------------------------------------------------------
-# Snippets
-# ---------------------------------------------------------------------------
 
 # Same-origin API paths on a UI host.
 # args[0] = rpc upstream, args[1] = admin upstream
@@ -53,10 +29,6 @@
 		{$AUTH_USER} {$AUTH_PASSWORDHASH}
 	}
 }
-
-# ---------------------------------------------------------------------------
-# Sites
-# ---------------------------------------------------------------------------
 
 wallet.{$DOMAIN} {
 	@protected not path /rpc*
@@ -93,15 +65,6 @@ adminrpc.{$DOMAIN} {
 	}
 }
 
-# ---------------------------------------------------------------------------
-# Monitoring 
-# ---------------------------------------------------------------------------
-
 monitoring.{$DOMAIN} {
 	reverse_proxy grafana:3000
-}
-
-loki.{$DOMAIN} {
-	import auth
-	reverse_proxy loki:3100
 }
