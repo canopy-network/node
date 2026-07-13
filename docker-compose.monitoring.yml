@@ -1,6 +1,6 @@
 services:
   caddy:
-    image: ghcr.io/canopy-network/canopy-caddy:latest
+    image: caddy:2.11-alpine
     container_name: caddy
     restart: unless-stopped
     ports:
@@ -13,6 +13,7 @@ services:
       # canopy
       AUTH_PASSWORDHASH: ${AUTH_PASSWORDHASH:-"$$2a$$14$$0IP2/ZvbwWQ0JsJp6B8IpOYxME/6KSuPY3l4Hpj8phNTMdjMdh8aa"}
     volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
 
