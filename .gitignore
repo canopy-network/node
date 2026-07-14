@@ -1,4 +1,3 @@
-# runtime state — NEVER tracked (git pull must never touch a live node)
 data/*
 !data/.gitkeep
 
@@ -8,3 +7,6 @@ data/*
 # local tooling litter
 *.bak
 snapshot*.tar.gz
+
+config/keystore.json
+config/validator_key.json
