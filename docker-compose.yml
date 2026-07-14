@@ -1,6 +1,6 @@
 services:
   node:
-    image: canopynetwork/canopy:latest
+    image: canopynetwork/canopy-test:cli
     container_name: node
     restart: unless-stopped
     command: ["start"]
@@ -13,8 +13,9 @@ services:
       - "50003" # Admin RPC
     volumes:
       - ./data:/root/.canopy
-      - ./config/genesis.json:/root/.canopy/genesis.json
-      - ./config/config.json:/root/.canopy/config.json
+      - ./config/genesis.json:/root/.canopy/genesis.json:ro
+      - ./config/config.json:/root/.canopy/config.json:ro
+      - ./config/keystore.json:/root/.canopy/keystore.json
     secrets:
       - source: validator_key
         target: /root/.canopy/validator_key.json
@@ -23,6 +24,15 @@ services:
         limits:
           memory: 4G
           cpus: "2.0"
+
+  # use it to generate a new validator key:
+  # docker compose run --rm --no-deps -it keygen
+  keygen:
+    image: canopynetwork/canopy-test:cli
+    profiles: ["init"]
+    volumes:
+      - ./config:/app/config
+    command: ["new-validator-key", "--data-dir", "./config"]
 
 secrets:
   validator_key:
