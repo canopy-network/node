@@ -6,13 +6,10 @@ endif
 
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 
-.PHONY: help setup hash-password up down restart logs status validate snapshot init-keys
+.PHONY: help hash-password up down restart logs status validate snapshot init-keys
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
-
-setup: ## One-time setup: .env, data dirs, node configs, validator keys
-	./scripts/setup.sh
 
 hash-password: ## Generate a bcrypt hash for AUTH_PASSWORDHASH (prompts for password)
 	@docker run --rm -it caddy:2.10-alpine caddy hash-password
@@ -38,5 +35,7 @@ status: ## Show container status
 snapshot: ## Download mainnet snapshots into data/ (stops nodes first)
 	./scripts/snapshot.sh
 
-init-keys: ## First-boot: generate validator keys
+snapshot-up: snapshot up ## Download mainnet snapshots into data/ and start nodes
+
+gen-key: ## First-boot: generate validator key
 	docker compose run --rm --no-deps -it keygen
