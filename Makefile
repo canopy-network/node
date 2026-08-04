@@ -33,7 +33,7 @@ status: ## Show container status
 	$(COMPOSE) ps
 
 snapshot: ## Download mainnet snapshots into data/ (stops nodes first)
-	SNAPSHOT_URL=http://canopy-mainnet-latest-chain-id1.us.nodefleet.net/ ./scripts/snapshot.sh
+	./scripts/snapshot.sh
 
 snapshot-up: snapshot up ## Download mainnet snapshots into data/ and start nodes
 
