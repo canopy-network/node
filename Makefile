@@ -12,7 +12,10 @@ help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
 
 hash-password: ## Generate a bcrypt hash for AUTH_PASSWORDHASH (prompts for password)
-	@docker run --rm -it caddy:2.10-alpine caddy hash-password
+	@read -s -p "Password: " pw; echo; \
+	echo "AUTH_PASSWORDHASH (\$$ already escaped as \$$\$$ for .env):"; \
+	docker run --rm -i caddy:2.10-alpine caddy hash-password -p "$$pw" | sed 's/\$$/\$$\$$/g'
+
 
 pull: ## Pull the latest canopynetwork/canopy image
 	$(COMPOSE) pull node
