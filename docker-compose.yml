@@ -27,7 +27,7 @@ services:
   # use it to generate a new validator key:
   # docker compose run --rm --no-deps -it keygen
   keygen:
-    image: canopynetwork/canopy-test:cli
+    image: canopynetwork/canopy:latest
     profiles: ["init"]
     volumes:
       - ./config:/app/config
