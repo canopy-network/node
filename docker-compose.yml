@@ -6,10 +6,11 @@ services:
     command: ["start"]
     ports:
       - "9001:9001" # TCP P2P
-      - "50000:50000" # Wallet
-      - "50001:50001" # Explorer
-      - "50002:50002" # RPC
-      - "50003:50003" # Admin RPC
+    expose:
+      - "50000" # Wallet
+      - "50001" # Explorer
+      - "50002" # RPC
+      - "50003" # Admin RPC
     volumes:
       - ./data:/root/.canopy
       - ./config/genesis.json:/root/.canopy/genesis.json:ro
