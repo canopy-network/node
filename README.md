@@ -47,8 +47,8 @@ Copy `docker-compose.monitoring.yml` to the same directory as the previous compo
 ```bash
 cp .env.example .env
 # edit .env: set DOMAIN=<your-domain> (defaults to localhost),
-# change AUTH_PASSWORDHASH for production (docker run --rm -it caddy:2.11-alpine caddy hash-password),
-# and set GF_ADMIN_PASSWORD
+# change AUTH_PASSWORDHASH for production (docker run --rm -it caddy:2.11-alpine caddy hash-password 
+# or make hash-password), if the docker command is used, the $ must be escaped as $$ and set GF_ADMIN_PASSWORD
 
 docker compose -f docker-compose.monitoring.yml up -d
 ```
