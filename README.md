@@ -5,12 +5,16 @@ Docker-based setup for running a canopy validator (or full node).
 ## Prerequisites
 
 - A server with `docker` installed
-- **Validators only:** a domain name with a DNS `*.<DOMAIN>` wildcard A record
-  pointing at the server's IP. 
+- **Validators only:** a domain name with a DNS `*.<DOMAIN>` wildcard A record pointing at the
+  server's IP.
 
 ## 1. Node setup
 
-Copy `docker-compose.yml` and the `config/` directory to the server on the same base directory, then:
+Copy `docker-compose.yml` and the `config/` directory to the server on the same base directory,
+then:
+
+> [!NOTE]  
+> You may also clone the whole repository with `git clone` to skip copying each file individually.
 
 ```bash
 # generate the validator key by writing config/keystore.json + config/validator_key.json
@@ -23,26 +27,25 @@ docker compose run --rm --no-deps -it keygen
 docker compose up -d
 ```
 
-If you also copy the `Makefile`, the equivalent shortcuts are `make init-keys`
-and `make up` (see [Operations](#operations)).
+If you also copy the `Makefile`, the equivalent shortcuts are `make init-keys` and `make up` (see
+[Operations](#operations)).
 
 ### Migrating an existing validator
 
-Skip `keygen`. Instead, copy your existing `config.json`, `keystore.json`,
-and `validator_key.json` into `config/` before running `docker compose up -d`.
+Skip `keygen`. Instead, copy your existing `config.json`, `keystore.json`, and `validator_key.json`
+into `config/` before running `docker compose up -d`.
 
-You may also need to update `config.json` so `rpcURL` is `"/rpc"` and
-`adminRPCUrl` is `"/adminrpc"`.
+You may also need to update `config.json` so `rpcURL` is `"/rpc"` and `adminRPCUrl` is
+`"/adminrpc"`.
 
 ## 2. Monitoring & public access (optional)
 
-`docker-compose.monitoring.yml` runs Caddy (reverse proxy + auto-HTTPS) and
-the prometheus/grafana/loki/alloy stack. Caddy is also what exposes the
-wallet, explorer, and RPC endpoints for public access. The node
-container only publishes its P2P port (`9001`) on its own, so skip this step
-only if you don't need those endpoints reachable from outside the box.
+`docker-compose.monitoring.yml` runs Caddy (reverse proxy + auto-HTTPS) and the
+prometheus/grafana/loki/alloy stack. Caddy is also what exposes the wallet, explorer, and RPC
+endpoints for public access. The node container only publishes its P2P port (`9001`) on its own, so
+skip this step only if you don't need those endpoints reachable from outside the box.
 
-Copy `docker-compose.monitoring.yml` to the same directory as the previous compose file, then:
+Copy `docker-compose.monitoring.yml` to the same directory as the previous compose file, along with the `monitoring` folder, then:
 
 ```bash
 cp .env.example .env
@@ -53,7 +56,9 @@ cp .env.example .env
 docker compose -f docker-compose.monitoring.yml up -d
 ```
 
-Local development: leave `DOMAIN=localhost`, you can still access through `<SERVICE>.localhost`. Production: point the `*.<DOMAIN>` wildcard at the box and certificates are issued automatically via Let's Encrypt.
+Local development: leave `DOMAIN=localhost`, you can still access through `<SERVICE>.localhost`.
+Production: point the `*.<DOMAIN>` wildcard at the box and certificates are issued automatically via
+Let's Encrypt.
 
 ### URLs
 
@@ -68,24 +73,22 @@ Local development: leave `DOMAIN=localhost`, you can still access through `<SERV
 
 ## 3. Snapshot (optional)
 
-Sync from a mainnet snapshot instead of genesis. Copy `scripts/snapshot.sh`
-to the server, then:
+Sync from a mainnet snapshot instead of genesis. Copy `scripts/snapshot.sh` to the server, then:
 
 ```bash
 SNAPSHOT_URL=<url> ./scripts/snapshot.sh
 ```
 
-This stops the node, wipes `data/canopy`, downloads and extracts the
-snapshot, then restarts the node. `SNAPSHOT_URL` can also come from `.env`
-if it's already in place.
+This stops the node, wipes `data/canopy`, downloads and extracts the snapshot, then restarts the
+node. `SNAPSHOT_URL` can also come from `.env` if it's already in place.
 
-You can also run `make snapshot-up` to start the nodes after the snapshot is applied (see [Operations](#operations)).
+You can also run `make snapshot-up` to start the nodes after the snapshot is applied (see
+[Operations](#operations)).
 
 ## Operations
 
-The `Makefile` wraps both compose files together (`docker compose -f
-docker-compose.yml -f docker-compose.monitoring.yml`), so its targets act on
-node + monitoring as one stack:
+The `Makefile` wraps both compose files together (`docker compose -f docker-compose.yml -f
+docker-compose.monitoring.yml`), so its targets act on node + monitoring as one stack:
 
 ```bash
 make help       # all targets
@@ -100,9 +103,9 @@ make snapshot-up   # sync from the mainnet snapshot instead of genesis and start
 make down       # stop everything
 ```
 
-Upgrading canopy: `make pull && make up` (or `docker compose pull node &&
-docker compose up -d`). The node also self-updates in place via canopy's
-auto-update coordinator when `autoUpdate` is enabled in config (enabled by default).
+Upgrading canopy: `make pull && make up` (or `docker compose pull node && docker compose up -d`).
+The node also self-updates in place via canopy's auto-update coordinator when `autoUpdate` is
+enabled in config (enabled by default).
 
 ## Repo layout
 

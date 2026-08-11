@@ -75,8 +75,6 @@ services:
       - source: loki_config
         target: /etc/loki/config.yaml
     volumes:
-      # /loki is pre-owned by the loki user in the image, so a fresh named
-      # volume inherits the right permissions (uid 10001)
       - loki-data:/loki
 
   alloy:
