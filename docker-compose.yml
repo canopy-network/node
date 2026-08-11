@@ -27,12 +27,11 @@ services:
   # use it to generate a new validator key:
   # docker compose run --rm --no-deps -it keygen
   keygen:
-    # TODO: Change this to the official image once it can
-    # run custom commands with auto update enabled
     image: canopynetwork/canopy-test:cli
     profiles: ["init"]
     volumes:
       - ./config:/app/config
+    entrypoint: ["/bin/cli"]
     command: ["new-validator-key", "--data-dir", "./config"]
 
 secrets:
