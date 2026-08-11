@@ -1,16 +1,15 @@
 services:
   node:
-    image: canopynetwork/canopy:latest
+    image: canopynetwork/canopy-test:local
     container_name: node
     restart: unless-stopped
     command: ["start"]
     ports:
       - "9001:9001" # TCP P2P
-    expose:
-      - "50000" # Wallet
-      - "50001" # Explorer
-      - "50002" # RPC
-      - "50003" # Admin RPC
+      - "50000:50000" # Wallet
+      - "50001:50001" # Explorer
+      - "50002:50002" # RPC
+      - "50003:50003" # Admin RPC
     volumes:
       - ./data:/root/.canopy
       - ./config/genesis.json:/root/.canopy/genesis.json:ro
@@ -28,7 +27,9 @@ services:
   # use it to generate a new validator key:
   # docker compose run --rm --no-deps -it keygen
   keygen:
-    image: canopynetwork/canopy:latest
+    # TODO: Change this to the official image once it can
+    # run custom commands with auto update enabled
+    image: canopynetwork/canopy-test:cli
     profiles: ["init"]
     volumes:
       - ./config:/app/config
