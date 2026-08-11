@@ -32,6 +32,19 @@ services:
       - prometheus-data:/prometheus
       - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
 
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    container_name: alertmanager
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    expose:
+      - "9093"
+    configs:
+      - source: alertmanager_config
+        target: /etc/alertmanager/alertmanager.yml
+    volumes:
+      - alertmanager-data:/alertmanager
+
   grafana:
     image: grafana/grafana:12.3
     container_name: grafana
@@ -86,6 +99,7 @@ volumes:
   caddy-data:
   caddy-config:
   prometheus-data:
+  alertmanager-data:
   grafana-data:
   loki-data:
   alloy-data:
@@ -165,6 +179,11 @@ configs:
       rule_files:
         - /etc/prometheus/alerts.yml
 
+      alerting:
+        alertmanagers:
+          - static_configs:
+              - targets: ["alertmanager:9093"]
+
       scrape_configs:
         - job_name: canopy-nodes
           static_configs:
@@ -173,6 +192,22 @@ configs:
         - job_name: prometheus
           static_configs:
             - targets: ["localhost:9090"]
+
+  alertmanager_config:
+    content: |
+      route:
+        receiver: notifications
+        group_by: ["alertname"]
+        group_wait: 10s
+        group_interval: 5m
+        repeat_interval: 4h
+
+      receivers:
+        - name: notifications
+          ${ALERTS_DISCORD_WEBHOOK:+discord_configs:}
+          ${ALERTS_DISCORD_WEBHOOK:+  - webhook_url: "${ALERTS_DISCORD_WEBHOOK}"}
+          ${ALERTS_PAGERDUTY_TOKEN:+pagerduty_configs:}
+          ${ALERTS_PAGERDUTY_ROUTING_KEY:+  - routing_key: "${ALERTS_PAGERDUTY_ROUTING_KEY}"}
 
   grafana_datasources:
     content: |
