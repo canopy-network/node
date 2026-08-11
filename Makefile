@@ -9,7 +9,7 @@ COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 .PHONY: help hash-password up down restart logs status validate snapshot init-keys
 
 help: ## Show available targets
-	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
 
 hash-password: ## Generate a bcrypt hash for AUTH_PASSWORDHASH (prompts for password)
 	@read -s -p "Password: " pw; echo; \
