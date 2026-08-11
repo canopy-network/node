@@ -1,0 +1,375 @@
+groups:
+  - name: canopy
+    interval: 15s
+    rules:
+      - alert: BFTHeightStalledLowLimit
+        expr: delta(canopy_bft_height[3m]) == 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: BFT height has not advanced
+          description: height has not increased in the last 3 min on {{ $labels.job }}
+
+      - alert: BFTHeightStalledSoftLimit
+        expr: delta(canopy_bft_height[6m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: BFT height has not advanced
+          description: height has not increased in the last 6 min on {{ $labels.job }}
+
+      - alert: BFTRootHeightStalledLowLimit
+        expr: delta(canopy_bft_root_height[3m]) == 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: BFT root height has not advanced
+          description: root height has not increased in the last 3 min on {{ $labels.job }}
+
+      - alert: BFTRootHeightStalledSoftLimit
+        expr: delta(canopy_bft_root_height[6m]) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: BFT root height has not advanced
+          description: root height has not increased in the last 6 min on {{ $labels.job }}
+
+      - alert: DBPartitionSizeLowLimit
+        expr: canopy_store_partition_size > 1e+07
+        labels:
+          severity: warning
+        annotations:
+          summary: DBPartitionSize over low limit
+          description: DBPartitionSize over 10MB on {{ $labels.job }}
+
+      - alert: DBPartitionSizeSoftLimit
+        expr: canopy_store_partition_size > 7.5e+07
+        labels:
+          severity: critical
+        annotations:
+          summary: DBPartitionSize over soft limit
+          description: DBPartitionSize over 75MB on {{ $labels.job }}
+
+      - alert: DBCommitSizeLowLimit
+        expr: canopy_store_commit_size > 1e+06
+        labels:
+          severity: warning
+        annotations:
+          summary: DBCommitSize over low limit
+          description: DBCommitSize over 1MB on {{ $labels.job }}
+
+      - alert: DBCommitSizeSoftLimit
+        expr: canopy_store_commit_size > 1e+07
+        labels:
+          severity: critical
+        annotations:
+          summary: DBCommitSize over soft limit
+          description: DBCommitSize over 10MB on {{ $labels.job }}
+
+      - alert: DBCommitEntriesLowLimit
+        expr: canopy_store_commit_entries > 1e+06
+        labels:
+          severity: warning
+        annotations:
+          summary: DBCommitEntries over low limit
+          description: DBCommitEntries over 1,000,000 on {{ $labels.job }}
+
+      - alert: DBCommitEntriesSoftLimit
+        expr: canopy_store_commit_entries > 1.5e+06
+        labels:
+          severity: critical
+        annotations:
+          summary: DBCommitEntries over soft limit
+          description: DBCommitEntries over 1,500,000 on {{ $labels.job }}
+
+      - alert: DBPartitionEntriesLowLimit
+        expr: canopy_store_partition_entries > 1e+06
+        labels:
+          severity: warning
+        annotations:
+          summary: DBPartitionEntries over low limit
+          description: DBPartitionEntries over 1,000,000 on {{ $labels.job }}
+
+      - alert: DBPartitionEntriesSoftLimit
+        expr: canopy_store_partition_entries > 1.5e+06
+        labels:
+          severity: critical
+        annotations:
+          summary: DBPartitionEntries over soft limit
+          description: DBPartitionEntries over 1,500,000 on {{ $labels.job }}
+
+      - alert: DBPartitionTimeLowLimit
+        expr: canopy_store_partition_time_sum > 120
+        labels:
+          severity: warning
+        annotations:
+          summary: DBPartitionTime over low limit
+          description: DBPartitionTime over 2min on {{ $labels.job }}
+
+      - alert: DBPartitionTimeSoftLimit
+        expr: canopy_store_partition_time_sum > 300
+        labels:
+          severity: critical
+        annotations:
+          summary: DBPartitionTime over soft limit
+          description: DBPartitionTime over 5min on {{ $labels.job }}
+
+      - alert: MempoolSizeLowLimit
+        expr: canopy_mempool_size > 500000
+        labels:
+          severity: warning
+        annotations:
+          summary: MempoolSize over low limit
+          description: MempoolSize over 500KB on {{ $labels.job }}
+
+      - alert: MempoolSizeSoftLimit
+        expr: canopy_mempool_size > 2e+06
+        labels:
+          severity: critical
+        annotations:
+          summary: MempoolSize over soft limit
+          description: MempoolSize over 2MB on {{ $labels.job }}
+
+      - alert: MempoolCountLowLimit
+        expr: canopy_mempool_tx_count > 3500
+        labels:
+          severity: warning
+        annotations:
+          summary: MempoolCount over low limit
+          description: MempoolCount over 3,500 on {{ $labels.job }}
+
+      - alert: MempoolCountSoftLimit
+        expr: canopy_mempool_tx_count > 5000
+        labels:
+          severity: critical
+        annotations:
+          summary: MempoolCount over soft limit
+          description: MempoolCount over 5,000 on {{ $labels.job }}
+
+      - alert: BFTRoundsLowLimit
+        expr: canopy_bft_round > 1
+        labels:
+          severity: warning
+        annotations:
+          summary: BFTRound over low limit
+          description: BFTRound over 1 Round on {{ $labels.job }}
+
+      - alert: BFTRoundsSoftLimit
+        expr: canopy_bft_round > 3
+        labels:
+          severity: critical
+        annotations:
+          summary: BFTRound over soft limit
+          description: BFTRound over 3 Rounds on {{ $labels.job }}
+
+      - alert: BlockSizeLowLimit
+        expr: canopy_block_size > 500000
+        labels:
+          severity: warning
+        annotations:
+          summary: BlockSize over low limit
+          description: BlockSize over 500KB on {{ $labels.job }}
+
+      - alert: BlockSizeSoftLimit
+        expr: canopy_block_size > 750000
+        labels:
+          severity: critical
+        annotations:
+          summary: BlockSize over soft limit
+          description: BlockSize over 750KB on {{ $labels.job }}
+
+      - alert: LargestTXSizeLowLimit
+        expr: canopy_block_largest_txn > 2000
+        labels:
+          severity: warning
+        annotations:
+          summary: LargestTxSize over low limit
+          description: LargestTxSize over 2KB on {{ $labels.job }}
+
+      - alert: LargestTXSizeSoftLimit
+        expr: canopy_block_largest_txn > 3000
+        labels:
+          severity: critical
+        annotations:
+          summary: LargestTxSize over soft limit
+          description: LargestTxSize over 3KB on {{ $labels.job }}
+
+      - alert: TotalPeersLowLimit
+        expr: canopy_peer_total < 3
+        labels:
+          severity: warning
+        annotations:
+          summary: TotalPeers low limit
+          description: "Total peers below 3 peers on {{ $labels.job }}"
+
+      - alert: TotalPeersSoftLimit
+        expr: canopy_peer_total < 2
+        labels:
+          severity: critical
+        annotations:
+          summary: TotalPeers soft limit
+          description: "Only one peer connected on {{ $labels.job }}"
+
+      - alert: DBCommitTimeLowLimit
+        expr: rate(canopy_store_commit_time_sum[5m]) > 1.5
+        labels:
+          severity: warning
+        annotations:
+          summary: DBCommitTime over low limit on {{ $labels.job }}
+          description: DBCommitTime over 1.5 secs on {{ $labels.job }}
+
+      - alert: DBCommitTimeSoftLimit
+        expr: rate(canopy_store_commit_time_sum[5m]) > 2
+        labels:
+          severity: critical
+        annotations:
+          summary: DBCommitTime over soft limit on {{ $labels.job }}
+          description: DBCommitTime over 2 secs on {{ $labels.job }}
+
+      - alert: BlockProcessingTimeLowLimit
+        expr: rate(canopy_block_processing_time_sum[5m]) > 2
+        labels:
+          severity: warning
+        annotations:
+          summary: BlockProcessingTime over low limit on {{ $labels.job }}
+          description: BlockProcessing time over 2 secs on {{ $labels.job }}
+
+      - alert: BlockProcessingTimeSoftLimit
+        expr: rate(canopy_block_processing_time_sum[5m]) > 3
+        labels:
+          severity: critical
+        annotations:
+          summary: BlockProcessingTime over soft limit on {{ $labels.job }}
+          description: BlockProcessingTime over 3 secs on {{ $labels.job }}
+
+      - alert: BFTCommitTimeLowLimit
+        expr: rate(canopy_bft_commit_time_sum[5m]) > 1
+        labels:
+          severity: warning
+        annotations:
+          summary: BFTCommitTime over low limit on {{ $labels.job }}
+          description: BFTCommitTime over 1 sec on {{ $labels.job }}
+
+      - alert: BFTCommitTimeSoftLimit
+        expr: rate(canopy_bft_commit_time_sum[5m]) > 1.5
+        labels:
+          severity: critical
+        annotations:
+          summary: BFTCommitTime over soft limit on {{ $labels.job }}
+          description: BFTCommitTime over 1.5 secs on {{ $labels.job }}
+
+      - alert: BFTProposeVoteTimeLowLimit
+        expr: rate(canopy_bft_propose_vote_time_sum[5m]) > 2
+        labels:
+          severity: warning
+        annotations:
+          summary: BFTProposeVoteTime over low limit on {{ $labels.job }}
+          description: BFTProposeVoteTime over 2 secs on {{ $labels.job }}
+
+      - alert: BFTProposeVoteTimeSoftLimit
+        expr: rate(canopy_bft_propose_vote_time_sum[5m]) > 3
+        labels:
+          severity: critical
+        annotations:
+          summary: BFTProposeVoteTime over soft limit on {{ $labels.job }}
+          description: BFTProposeVoteTime over 3 secs on {{ $labels.job }}
+
+      - alert: RootChainInfoTimeLowLimit
+        expr: rate(canopy_root_chain_info_time_sum[5m]) > 0.7
+        labels:
+          severity: warning
+        annotations:
+          summary: RootChainInfoTime over low limit on {{ $labels.job }}
+          description: RootChainInfoTime over 0.7 secs on {{ $labels.job }}
+
+      - alert: RootChainInfoTimeSoftLimit
+        expr: rate(canopy_root_chain_info_time_sum[5m]) > 1
+        labels:
+          severity: critical
+        annotations:
+          summary: RootChainInfoTime over soft limit on {{ $labels.job }}
+          description: RootChainInfoTime over 1 sec on {{ $labels.job }}
+
+      - alert: BFTElectionTimeLowLimit
+        expr: rate(canopy_bft_election_time_sum[5m]) > 1
+        labels:
+          severity: warning
+        annotations:
+          summary: BFTElectionTime over low limit on {{ $labels.job }}
+          description: BFTElectionTime over 1 sec on {{ $labels.job }}
+
+      - alert: BFTElectionTimeSoftLimit
+        expr: rate(canopy_bft_election_time_sum[5m]) > 1.5
+        labels:
+          severity: critical
+        annotations:
+          summary: BFTElectionTime over soft limit on {{ $labels.job }}
+          description: BFTElectionTime over 1.5 secs on {{ $labels.job }}
+
+      - alert: BFTPrecommitVoteTimeLowLimit
+        expr: rate(canopy_bft_precommit_vote_time_sum[5m]) > 1
+        labels:
+          severity: warning
+        annotations:
+          summary: BFTPrecommitVoteTime over low limit on {{ $labels.job }}
+          description: BFTPrecommitVoteTime over 1 sec on {{ $labels.job }}
+
+      - alert: BFTPrecommitVoteTimeSoftLimit
+        expr: rate(canopy_bft_precommit_vote_time_sum[5m]) > 1.5
+        labels:
+          severity: critical
+        annotations:
+          summary: BFTPrecommitVoteTime over soft limit on {{ $labels.job }}
+          description: BFTPrecommitVoteTime over 1.5 secs on {{ $labels.job }}
+
+      - alert: BFTElectionVoteTimeLowLimit
+        expr: rate(canopy_bft_election_vote_time_sum[5m]) > 1
+        labels:
+          severity: warning
+        annotations:
+          summary: BFTElectionVoteTime over low limit on {{ $labels.job }}
+          description: BFTElectionVoteTime over 1 sec on {{ $labels.job }}
+
+      - alert: BFTElectionVoteTimeSoftLimit
+        expr: rate(canopy_bft_election_vote_time_sum[5m]) > 1.5
+        labels:
+          severity: critical
+        annotations:
+          summary: BFTElectionVoteTime over soft limit on {{ $labels.job }}
+          description: BFTElectionVoteTime over 1.5 secs on {{ $labels.job }}
+
+      - alert: BFTProposeTimeLowLimit
+        expr: rate(canopy_bft_propose_time_sum[5m]) > 2
+        labels:
+          severity: warning
+        annotations:
+          summary: BFTProposeTime over low limit on {{ $labels.job }}
+          description: BFTProposeTime over 2 secs on {{ $labels.job }}
+
+      - alert: BFTProposeTimeSoftLimit
+        expr: rate(canopy_bft_propose_time_sum[5m]) > 3
+        labels:
+          severity: critical
+        annotations:
+          summary: BFTProposeTime over soft limit on {{ $labels.job }}
+          description: BFTProposeTime over 3 secs on {{ $labels.job }}
+
+      - alert: DoubleSigner
+        expr: canopy_validator_double_signer > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: DoubleSigner detected
+          description: DoubleSigner has been detected on {{ $labels.job }}
+
+      - alert: NonSignerHardLimit
+        expr: canopy_validator_non_signer > 1
+        labels:
+          severity: critical
+        annotations:
+          summary: NonSigner hard limit
+          description: "NonSigner over 1 on {{ $labels.job }}"
