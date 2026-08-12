@@ -38,7 +38,7 @@ restart: ## Restart the nodes (reload config.json changes)
 	$(FULL_COMPOSE) restart node
 
 logs: ## Tail node logs
-	$(NODE_COMPOSE) logs -f node --tail 200
+	docker compose -f $(NODE_COMPOSE) logs -f node --tail 200
 
 status: ## Show container status
 	$(FULL_COMPOSE) ps
