@@ -6,7 +6,9 @@ ifneq (,$(wildcard .env))
   export
 endif
 
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+NODE_COMPOSE := docker-compose.yml
+MONITORING_COMPOSE := docker-compose.monitoring.yml
+FULL_COMPOSE := docker compose -f $(NODE_COMPOSE) -f $(MONITORING_COMPOSE)
 
 .PHONY: help hash-password up down restart logs status validate snapshot init-keys
 
@@ -20,22 +22,25 @@ hash-password: ## Generate a bcrypt hash for AUTH_PASSWORDHASH (prompts for pass
 
 
 pull: ## Pull the latest canopynetwork/canopy image
-	$(COMPOSE) pull node
+	$(FULL_COMPOSE) pull node
+
+node-up: ## Start the node only (no monitoring)
+	docker compose -f $(NODE_COMPOSE) up -d node
 
 up: ## Starts everything (node, monitoring, etc.)
-	$(COMPOSE) up -d
+	$(FULL_COMPOSE) up -d
 
 down: ## Stop everything
-	$(COMPOSE) --profile monitoring down
+	$(FULL_COMPOSE) --profile monitoring down
 
 restart: ## Restart the nodes (reload config.json changes)
-	$(COMPOSE) restart node
+	$(FULL_COMPOSE) restart node
 
 logs: ## Tail node logs
-	$(COMPOSE) logs -f node
+	$(FULL_COMPOSE) logs -f node
 
 status: ## Show container status
-	$(COMPOSE) ps
+	$(FULL_COMPOSE) ps
 
 snapshot: ## Download mainnet snapshots into data/ (stops nodes first)
 	./scripts/snapshot.sh
