@@ -3,10 +3,16 @@
 set -euo pipefail
 : "${SNAPSHOT_URL:?SNAPSHOT_URL is required}"
 
-echo "This wipes data/canopy and restores from:"
-echo "  $SNAPSHOT_URL"
-read -rp "Continue? [y/N]: " ok
-[[ "$ok" == [Yy] ]] || exit 0
+if [[ -d data/canopy && -n "$(ls -A data/canopy)" ]]; then
+	echo "This wipes data/canopy and restores from:"
+	echo "  $SNAPSHOT_URL"
+	read -rp "Continue? [y/N]: " ok
+	[[ "$ok" == [Yy] ]] || exit 0
+else
+	echo "data/canopy is missing or empty; skipping wipe confirmation."
+	echo "Restoring from:"
+	echo "  $SNAPSHOT_URL"
+fi
 
 docker compose stop node || true
 
