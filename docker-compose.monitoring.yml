@@ -9,8 +9,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
       AUTH_USER: ${AUTH_USER:-canopy}
-      # canopy
-      AUTH_PASSWORDHASH: ${AUTH_PASSWORDHASH:-"$$2a$$14$$0IP2/ZvbwWQ0JsJp6B8IpOYxME/6KSuPY3l4Hpj8phNTMdjMdh8aa"}
+      AUTH_PASSWORDHASH: ${AUTH_PASSWORDHASH:-"$$2a$$14$$0IP2/ZvbwWQ0JsJp6B8IpOYxME/6KSuPY3l4Hpj8phNTMdjMdh8aa"} # canopy
     configs:
       - source: caddyfile
         target: /etc/caddy/Caddyfile
@@ -45,6 +44,19 @@ services:
     volumes:
       - alertmanager-data:/alertmanager
 
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.5
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    expose:
+      - "8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /sys:/sys:ro
+
   grafana:
     image: grafana/grafana:12.3
     container_name: grafana
@@ -59,6 +71,8 @@ services:
     configs:
       - source: grafana_datasources
         target: /etc/grafana/provisioning/datasources/automatic.yaml
+      - source: grafana_dashboards
+        target: /etc/grafana/provisioning/dashboards/automatic.yaml
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
@@ -191,6 +205,10 @@ configs:
           static_configs:
             - targets: ["localhost:9090"]
 
+        - job_name: cadvisor
+          static_configs:
+            - targets: ["cadvisor:8080"]
+
   alertmanager_config:
     content: |
       route:
@@ -204,7 +222,7 @@ configs:
         - name: notifications
           ${ALERTS_DISCORD_WEBHOOK:+discord_configs:}
           ${ALERTS_DISCORD_WEBHOOK:+  - webhook_url: "${ALERTS_DISCORD_WEBHOOK}"}
-          ${ALERTS_PAGERDUTY_TOKEN:+pagerduty_configs:}
+          ${ALERTS_PAGERDUTY_ROUTING_KEY:+pagerduty_configs:}
           ${ALERTS_PAGERDUTY_ROUTING_KEY:+  - routing_key: "${ALERTS_PAGERDUTY_ROUTING_KEY}"}
 
   grafana_datasources:
@@ -226,6 +244,18 @@ configs:
           type: loki
           access: proxy
           url: http://loki:3100
+
+  grafana_dashboards:
+    content: |
+      apiVersion: 1
+      providers:
+        - name: Canopy
+          type: file
+          updateIntervalSeconds: 30
+          allowUiUpdates: true
+          options:
+            path: /etc/grafana/dashboards
+            foldersFromFilesStructure: true
 
   loki_config:
     content: |

@@ -1,6 +1,6 @@
 services:
   node:
-    image: canopynetwork/canopy-test:local
+    image: canopynetwork/canopy:latest
     container_name: node
     restart: unless-stopped
     command: ["start"]
@@ -28,7 +28,6 @@ services:
   # docker compose run --rm --no-deps -it keygen
   keygen:
     image: canopynetwork/canopy:latest
-    profiles: ["init"]
     volumes:
       - ./config:/app/config
     entrypoint: ["/bin/cli"]
