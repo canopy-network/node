@@ -1,6 +1,7 @@
 # Canopy node stack
 SHELL := /bin/bash
 
+# Load environment variables from .env if it exists
 ifneq (,$(wildcard .env))
   include .env
   export
@@ -17,9 +18,9 @@ help: ## Show available targets
 
 hash-password: ## Generate a bcrypt hash for AUTH_PASSWORDHASH (prompts for password)
 	@read -s -p "Password: " pw; echo; \
-	echo "AUTH_PASSWORDHASH (\$$ already escaped as \$$\$$ for .env):"; \
+	printf "AUTH_PASSWORDHASH="; \
 	docker run --rm -i caddy:2.10-alpine caddy hash-password -p "$$pw" | sed 's/\$$/\$$\$$/g'
-
+	@echo "Copy the exact line above into .env"
 
 pull: ## Pull the latest canopynetwork/canopy image
 	$(FULL_COMPOSE) pull node
@@ -37,7 +38,7 @@ restart: ## Restart the nodes (reload config.json changes)
 	$(FULL_COMPOSE) restart node
 
 logs: ## Tail node logs
-	$(FULL_COMPOSE) logs -f node
+	$(NODE_COMPOSE) logs -f node --tail 200
 
 status: ## Show container status
 	$(FULL_COMPOSE) ps
