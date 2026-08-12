@@ -53,6 +53,7 @@ services:
       - "8080"
     volumes:
       - /:/rootfs:ro
+      - /run:/run:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /sys:/sys:ro
