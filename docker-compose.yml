@@ -24,14 +24,15 @@ services:
           memory: 4G
           cpus: "2.0"
 
-  # use it to generate a new validator key:
-  # docker compose run --rm --no-deps -it keygen
-  keygen:
-    image: canopynetwork/canopy:latest
-    volumes:
-      - ./config:/app/config
-    entrypoint: ["/bin/cli"]
-    command: ["new-validator-key", "--data-dir", "./config"]
+  # First-time setup: generate validator credentials in ./config
+  # (creates keystore.json and validator_key.json).
+  # Run from the repository root:
+  # docker run --rm -it \
+  #   --entrypoint /bin/cli \
+  #   -v "$(pwd)/config:/app/config" \
+  #   canopynetwork/canopy:latest \
+  #   new-validator-key --data-dir /app/config
+  # Or alternatively: make gen-key
 
 secrets:
   validator_key:

@@ -43,4 +43,8 @@ snapshot: ## Download mainnet snapshots into data/ (stops nodes first)
 snapshot-up: snapshot up ## Download mainnet snapshots into data/ and start nodes
 
 gen-key: ## First-boot: generate validator key
-	docker compose run --rm --no-deps -it keygen
+	@docker run --rm -it \
+		--entrypoint /bin/cli \
+		-v "$(CURDIR)/config:/app/config" \
+		canopynetwork/canopy:latest \
+		new-validator-key --data-dir /app/config
