@@ -3,7 +3,7 @@ services:
     image: canopynetwork/canopy:latest
     container_name: node
     restart: unless-stopped
-    command: ["start"]
+    command: ["start", "--external-address", "${DOMAIN:-localhost}"]
     ports:
       - "9001:9001" # TCP P2P
     expose:
