@@ -18,7 +18,11 @@ then:
 
 ```bash
 # generate the validator key by writing config/keystore.json + config/validator_key.json
-docker compose run --rm --no-deps -it keygen
+docker run --rm -it \
+  --entrypoint /bin/cli \
+  -v "$(pwd)/config:/app/config" \
+  canopynetwork/canopy:latest \
+  new-validator-key --data-dir /app/config
 
 # validators only: modify the "externalAddress" field in config/config.json to point to your domain
 #   config/config.json → "externalAddress": "tcp://<your-domain>"
@@ -27,12 +31,12 @@ docker compose run --rm --no-deps -it keygen
 docker compose up -d
 ```
 
-If you also copy the `Makefile`, the equivalent shortcuts are `make init-keys` and `make up` (see
+If you also copy the `Makefile`, the equivalent shortcuts are `make gen-key` and `make up` (see
 [Operations](#operations)).
 
 ### Migrating an existing validator
 
-Skip `keygen`. Instead, copy your existing `config.json`, `keystore.json`, and `validator_key.json`
+Skip the key generation step above. Instead, copy your existing `config.json`, `keystore.json`, and `validator_key.json`
 into `config/` before running `docker compose up -d`.
 
 You may also need to update `config.json` so `rpcURL` is `"/rpc"` and `adminRPCUrl` is
@@ -110,7 +114,7 @@ enabled in config (enabled by default).
 ## Repo layout
 
 ```
-docker-compose.yml            # node (+ keygen, run once via `docker compose run keygen`)
+docker-compose.yml            # node (+ validator key generation, run once via `make gen-key`)
 docker-compose.monitoring.yml # caddy + monitoring stack (configs inlined via `configs:`) 
 config/                       # node config + genesis (bind-mounted into the node)
 data/                         # runtime state (peers, chain db), gitignored
