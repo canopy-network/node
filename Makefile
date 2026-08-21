@@ -11,7 +11,7 @@ NODE_COMPOSE := docker-compose.yml
 MONITORING_COMPOSE := docker-compose.monitoring.yml
 FULL_COMPOSE := docker compose -f $(NODE_COMPOSE) -f $(MONITORING_COMPOSE)
 
-.PHONY: help hash-password up down restart logs status validate snapshot init-keys
+.PHONY: help hash-password up down restart logs status validate snapshot gen-key
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
