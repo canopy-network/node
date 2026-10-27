@@ -25,16 +25,19 @@ download_snapshot() {
 	wget "${@:3}" -O "$2" "$1"
 }
 
-# extract_into TARBALL DATA_DIR  (wipes DATA_DIR first; keeps only the db subdir,
-# so keystore.json/validator_key.json at the chain's data-dir root are untouched)
+# extract_into TARBALL DATA_DIR [LABEL]  (wipes DATA_DIR first; keeps only the db
+# subdir, so keystore.json/validator_key.json at the chain's data-dir root are
+# untouched). Shows a % progress bar via `pv` when installed, else a live file
+# count (install `pv` for the percentage bar: sudo apt-get install -y pv).
 extract_into() {
-	local tarball="$1" data_dir="$2"
+	local tarball="$1" data_dir="$2" label="${3:-snapshot}"
 	rm -rf "$data_dir"
 	mkdir -p "$data_dir"
 	if command -v pv >/dev/null 2>&1; then
-		pv "$tarball" | tar -xzf - -C "$data_dir/"
+		pv -N "$label" "$tarball" | tar -xzf - -C "$data_dir/"
 	else
-		tar -xzf "$tarball" -C "$data_dir/"
+		tar -xzvf "$tarball" -C "$data_dir/" 2>&1 \
+			| awk -v l="$label" '{printf "\r  [%s] %d files extracted", l, NR} END {print ""}'
 	fi
 }
 
@@ -57,7 +60,7 @@ if [[ -n "${SNAPSHOT_SERVICE:-}" ]]; then
 	echo "==== downloading snapshot ($SNAPSHOT_SERVICE) ===="
 	download_snapshot "$SNAPSHOT_URL" "$tmp"
 	echo "==== extracting snapshot ($SNAPSHOT_SERVICE) ===="
-	extract_into "$tmp" "$DATA_DIR"
+	extract_into "$tmp" "$DATA_DIR" "$SNAPSHOT_SERVICE"
 	rm -f "$tmp"
 	compose up -d "$SNAPSHOT_SERVICE"
 	echo "==== $SNAPSHOT_SERVICE restarted from snapshot ===="
@@ -130,7 +133,7 @@ echo "==== all snapshots downloaded ===="
 # ---- extract (sequential, clean output) ------------------------------------
 for i in "${!urls[@]}"; do
 	echo "==== extracting ${services[$i]} snapshot ===="
-	extract_into "${tmps[$i]}" "${dirs[$i]}"
+	extract_into "${tmps[$i]}" "${dirs[$i]}" "${services[$i]}"
 	rm -f "${tmps[$i]}"
 done
 
