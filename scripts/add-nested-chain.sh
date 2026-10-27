@@ -214,7 +214,9 @@ assemble_files() {
 	echo "Wrote $COMPOSE_BASENAME"
 
 	# ---- document the plugin env in .env.example --------------------------
-	[[ -n "$plugin_env_pairs" ]] && ensure_env_example_keys "$plugin_env_pairs"
+	if [[ -n "$plugin_env_pairs" ]]; then
+		ensure_env_example_keys "$plugin_env_pairs"
+	fi
 }
 
 # ---- document plugin env keys in .env.example (dedup by key) ---------------
