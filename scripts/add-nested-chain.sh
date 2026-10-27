@@ -221,7 +221,9 @@ ensure_env_example_keys() {
 warn_missing_env() {
 	local env_file="$REPO_ROOT/.env" env_example="$REPO_ROOT/.env.example"
 	local keys key line missing=()
-	keys="$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$COMPOSE_FILE" 2>/dev/null | sed -E 's/[${}]//g' | sort -u)"
+	# `grep` exits 1 when a plugin-less chain's compose has no ${VAR} refs; under
+	# `set -o pipefail` that would abort the script, so swallow it with `|| true`.
+	keys="$(grep -oE '\$\{[A-Za-z_][A-Za-z0-9_]*\}' "$COMPOSE_FILE" 2>/dev/null | sed -E 's/[${}]//g' | sort -u || true)"
 	for key in $keys; do
 		if [[ -f "$env_file" ]] && grep -qE "^${key}=" "$env_file"; then continue; fi
 		missing+=("$key")
@@ -230,7 +232,7 @@ warn_missing_env() {
 	echo
 	echo ">> ACTION REQUIRED: chain $CHAIN_ID's plugin needs these variables in your .env:"
 	for key in "${missing[@]}"; do
-		line="$(grep -E "^${key}=" "$env_example" 2>/dev/null | head -1)"
+		line="$(grep -E "^${key}=" "$env_example" 2>/dev/null | head -1 || true)"
 		echo "     ${line:-$key=<value>}"
 	done
 	if [[ -f "$env_file" ]]; then
