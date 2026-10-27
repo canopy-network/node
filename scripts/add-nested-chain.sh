@@ -61,18 +61,6 @@ assemble_files() {
 	[[ -f "$valkey_src" ]] || die "missing $valkey_src -- run 'make gen-key' first"
 	[[ -f "$CONFIG_DIR/config.json" ]] || die "missing $CONFIG_DIR/config.json"
 
-	# Derive the root chain URL from THIS node's own config. The nested chain's
-	# rootChain entry must point at the root chain running in this node, not at
-	# the public URL the API returns. Both the root chain id and its URL come
-	# straight out of config/config.json so nothing is hardcoded here.
-	local node_chain_id root_chain_url
-	node_chain_id="$(jq -r '.chainId' "$CONFIG_DIR/config.json")"
-	root_chain_url="$(jq -r --argjson id "$node_chain_id" \
-		'.rootChain[] | select(.chainId == $id) | .url' "$CONFIG_DIR/config.json")"
-	[[ -n "$root_chain_url" && "$root_chain_url" != "null" ]] \
-		|| die "could not derive root chain URL (chainId $node_chain_id) from config/config.json"
-	echo "Root chain: chainId=$node_chain_id url=$root_chain_url"
-
 	# Build everything in a temp dir, promote atomically on success.
 	local tmp_dir="$DATA_DIR/.chain-$CHAIN_ID.partial"
 	# shellcheck disable=SC2064
@@ -102,13 +90,9 @@ assemble_files() {
 	jq -e '.data.config' "$tmp_dir/config.resp.json" >/dev/null \
 		|| die "unexpected config response shape (missing .data.config)"
 
-	# Point the nested chain's rootChain entry at the local root chain URL.
-	jq --argjson rid "$node_chain_id" --arg rurl "$root_chain_url" '
-		.data.config
-		| if any(.rootChain[]?; .chainId == $rid)
-		  then .rootChain |= map(if .chainId == $rid then .url = $rurl else . end)
-		  else .rootChain += [{chainId: $rid, url: $rurl}] end
-	' "$tmp_dir/config.resp.json" >"$tmp_dir/config.json"
+	# Use the launchpad's config.json verbatim (including its rootChain entry);
+	# we no longer rewrite rootChain to point at this node's local root chain.
+	jq '.data.config' "$tmp_dir/config.resp.json" >"$tmp_dir/config.json"
 
 	# Container-internal data dir (/root/.canopy) and the P2P port; both come
 	# straight from the served config so we stay in lockstep with it.

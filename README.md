@@ -129,8 +129,8 @@ starts a container:
    is skipped silently) and writes them where the chain expects them. If the
    plugin needs env vars, they are documented in `.env.example` and you are
    prompted to add them to your `.env`.
-3. Rewrites the fetched config's root-chain entry to point at the root chain
-   running in *this* node (derived from `config/config.json`, not hardcoded).
+3. Writes the fetched `config.json` verbatim, including its `rootChain` entry as
+   served by the launchpad (it is not rewritten to point at this node).
 4. Reuses this node's `config/keystore.json` and `config/validator_key.json`
    verbatim (the node identity is identical across every chain). Run
    `make gen-key` first if you don't have them yet.
