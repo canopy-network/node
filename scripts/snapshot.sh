@@ -1,47 +1,133 @@
 #!/usr/bin/env bash
-# Restore a chain from a snapshot.
+# Restore chain(s) from snapshots.
 #
-# Defaults restore the root chain (data/canopy, service "node"). The nested-chain
-# helper (scripts/add-nested-chain.sh) reuses this script by overriding:
-#   SNAPSHOT_URL           the snapshot archive to download (required)
-#   SNAPSHOT_DATA_DIR      db dir to wipe & extract into   (default: data/canopy)
-#   SNAPSHOT_SERVICE       compose service to stop/start    (default: node)
-#   SNAPSHOT_COMPOSE_FILES extra `docker compose` -f args   (default: none)
+# Single-chain mode (used by scripts/add-nested-chain.sh): active whenever
+# SNAPSHOT_SERVICE is set. Restores exactly that one service. Overrides:
+#   SNAPSHOT_URL           snapshot archive to download   (required)
+#   SNAPSHOT_DATA_DIR      db dir to wipe & extract into  (default: data/canopy)
+#   SNAPSHOT_SERVICE       compose service to stop/start  (default: node)
+#   SNAPSHOT_COMPOSE_FILES extra `docker compose` -f args (default: none)
+#
+# Multi-chain mode (default, i.e. `make snapshot`): restores the root chain
+# (SNAPSHOT_URL -> data/canopy, service "node") plus EVERY added nested chain
+# (each docker-compose.chain-<id>.yml -> data/chain-<id>/<db>, service
+# "chain-<id>", snapshot from $SNAPSHOT_BASE/<id>). All snapshots download
+# concurrently; services are then stopped, extracted, and started together.
 set -euo pipefail
-: "${SNAPSHOT_URL:?SNAPSHOT_URL is required}"
 
-DATA_DIR="${SNAPSHOT_DATA_DIR:-data/canopy}"
-SERVICE="${SNAPSHOT_SERVICE:-node}"
-read -ra COMPOSE_FILES <<< "${SNAPSHOT_COMPOSE_FILES:-}"
-compose() { docker compose ${COMPOSE_FILES[@]+"${COMPOSE_FILES[@]}"} "$@"; }
+SNAPSHOT_BASE="${SNAPSHOT_BASE:-https://public-snapshots.app.canopynetwork.org/chain}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
 
-if [[ -d "$DATA_DIR" && -n "$(ls -A "$DATA_DIR")" ]]; then
-	echo "This wipes $DATA_DIR and restores from:"
-	echo "  $SNAPSHOT_URL"
-	read -rp "Continue? [y/N]: " ok
-	[[ "$ok" == [Yy] ]] || exit 0
-else
-	echo "$DATA_DIR is missing or empty; skipping wipe confirmation."
-	echo "Restoring from:"
-	echo "  $SNAPSHOT_URL"
+# download_snapshot URL OUTFILE [extra wget args...]
+download_snapshot() {
+	wget "${@:3}" -O "$2" "$1"
+}
+
+# extract_into TARBALL DATA_DIR  (wipes DATA_DIR first; keeps only the db subdir,
+# so keystore.json/validator_key.json at the chain's data-dir root are untouched)
+extract_into() {
+	local tarball="$1" data_dir="$2"
+	rm -rf "$data_dir"
+	mkdir -p "$data_dir"
+	if command -v pv >/dev/null 2>&1; then
+		pv "$tarball" | tar -xzf - -C "$data_dir/"
+	else
+		tar -xzf "$tarball" -C "$data_dir/"
+	fi
+}
+
+# ---- single-chain mode (scripts/add-nested-chain.sh) -----------------------
+if [[ -n "${SNAPSHOT_SERVICE:-}" ]]; then
+	: "${SNAPSHOT_URL:?SNAPSHOT_URL is required}"
+	DATA_DIR="${SNAPSHOT_DATA_DIR:-data/canopy}"
+	read -ra COMPOSE_FILES <<< "${SNAPSHOT_COMPOSE_FILES:-}"
+	compose() { docker compose ${COMPOSE_FILES[@]+"${COMPOSE_FILES[@]}"} "$@"; }
+
+	if [[ -d "$DATA_DIR" && -n "$(ls -A "$DATA_DIR" 2>/dev/null)" ]]; then
+		echo "This wipes $DATA_DIR and restores from:"
+		echo "  $SNAPSHOT_URL"
+		read -rp "Continue? [y/N]: " ok
+		[[ "$ok" == [Yy] ]] || exit 0
+	fi
+
+	compose stop "$SNAPSHOT_SERVICE" || true
+	tmp="snapshot.$SNAPSHOT_SERVICE.tar.gz"
+	echo "==== downloading snapshot ($SNAPSHOT_SERVICE) ===="
+	download_snapshot "$SNAPSHOT_URL" "$tmp"
+	echo "==== extracting snapshot ($SNAPSHOT_SERVICE) ===="
+	extract_into "$tmp" "$DATA_DIR"
+	rm -f "$tmp"
+	compose up -d "$SNAPSHOT_SERVICE"
+	echo "==== $SNAPSHOT_SERVICE restarted from snapshot ===="
+	exit 0
 fi
 
-compose stop "$SERVICE" || true
+# ---- multi-chain mode (default `make snapshot`) ----------------------------
+: "${SNAPSHOT_URL:?SNAPSHOT_URL is required (root chain snapshot; see .env)}"
 
-echo "==== downloading snapshot ===="
-wget -O snapshot.tar.gz "$SNAPSHOT_URL"
-rm -rf "$DATA_DIR"
-mkdir -p "$DATA_DIR"
-echo "==== extracting snapshot ===="
-if command -v pv >/dev/null 2>&1; then
-	pv snapshot.tar.gz | tar -xzf - -C "$DATA_DIR/"
-else
-	# no pv, fall back to a running file count.
-	tar -xzvf snapshot.tar.gz -C "$DATA_DIR/" 2>&1 |
-		awk '{printf "\r  %d files extracted", NR} END {print ""}'
+# Build parallel arrays of restore targets: root chain + each nested chain.
+urls=() dirs=() services=() tmps=()
+urls+=("$SNAPSHOT_URL");  dirs+=("data/canopy"); services+=("node"); tmps+=("snapshot.node.tar.gz")
+
+compose_flags=(-f docker-compose.yml)
+shopt -s nullglob
+for f in docker-compose.chain-*.yml; do
+	id="${f#docker-compose.chain-}"; id="${id%.yml}"
+	[[ "$id" =~ ^[0-9]+$ ]] || continue
+	compose_flags+=(-f "$f")
+	db_name="canopy"
+	if [[ -f "data/chain-$id/config.json" ]]; then
+		db_name="$(jq -r '.dbName // "canopy"' "data/chain-$id/config.json" 2>/dev/null || echo canopy)"
+	fi
+	urls+=("$SNAPSHOT_BASE/$id")
+	dirs+=("data/chain-$id/$db_name")
+	services+=("chain-$id")
+	tmps+=("snapshot.chain-$id.tar.gz")
+done
+shopt -u nullglob
+
+echo "Will restore ${#services[@]} chain(s) from snapshots:"
+for i in "${!services[@]}"; do
+	printf '  - %-10s %s -> %s\n' "${services[$i]}" "${urls[$i]}" "${dirs[$i]}"
+done
+read -rp "This wipes the db dirs above. Continue? [y/N]: " ok
+[[ "$ok" == [Yy] ]] || exit 0
+
+# Stop everything first (ignore services that aren't running yet).
+docker compose "${compose_flags[@]}" stop "${services[@]}" || true
+
+# ---- concurrent downloads --------------------------------------------------
+echo "==== downloading ${#urls[@]} snapshots concurrently ===="
+pids=()
+for i in "${!urls[@]}"; do
+	echo "  -> ${services[$i]}: ${urls[$i]}"
+	download_snapshot "${urls[$i]}" "${tmps[$i]}" -q &
+	pids+=("$!")
+done
+fail=0
+for i in "${!pids[@]}"; do
+	if ! wait "${pids[$i]}"; then
+		echo "error: download failed for ${services[$i]} (${urls[$i]})" >&2
+		fail=1
+	fi
+done
+if [[ "$fail" -ne 0 ]]; then
+	rm -f "${tmps[@]}"
+	echo "aborting: one or more snapshot downloads failed." >&2
+	exit 1
 fi
-rm -f snapshot.tar.gz
-echo "==== chain data restored ===="
+echo "==== all snapshots downloaded ===="
 
-compose up -d "$SERVICE"
-echo "==== node restarted from snapshot ===="
+# ---- extract (sequential, clean output) ------------------------------------
+for i in "${!urls[@]}"; do
+	echo "==== extracting ${services[$i]} snapshot ===="
+	extract_into "${tmps[$i]}" "${dirs[$i]}"
+	rm -f "${tmps[$i]}"
+done
+
+# ---- start all chains ------------------------------------------------------
+echo "==== starting all chains ===="
+docker compose "${compose_flags[@]}" up -d "${services[@]}"
+echo "==== done: restored & started ${services[*]} ===="

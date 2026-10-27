@@ -79,11 +79,15 @@ Sync from a mainnet snapshot instead of genesis. Copy `scripts/snapshot.sh` to t
 SNAPSHOT_URL=<url> ./scripts/snapshot.sh
 ```
 
-This stops the node, wipes `data/canopy`, downloads and extracts the snapshot, then restarts the
-node. `SNAPSHOT_URL` can also come from `.env` if it's already in place.
+Run plainly (`make snapshot`), it restores the **root chain** (`SNAPSHOT_URL` -> `data/canopy`)
+**and every added nested chain** (`docker-compose.chain-*.yml`) from their snapshots: it stops the
+services, downloads all snapshots **concurrently**, wipes & extracts each chain's db dir, then
+starts them all together. `SNAPSHOT_URL` (root chain) can come from `.env`; nested-chain snapshots
+come from `https://public-snapshots.app.canopynetwork.org/chain/<id>`. Only each chain's db dir is
+wiped, so the shared `keystore.json`/`validator_key.json` are preserved.
 
-You can also run `make snapshot-up` to start the nodes after the snapshot is applied (see
-[Operations](#operations)).
+You can also run `make snapshot-up` to additionally bring up monitoring after the snapshots are
+applied (see [Operations](#operations)).
 
 ## Operations
 
@@ -98,8 +102,8 @@ make up         # start everything
 make logs       # follow node logs
 make status     # show container status
 make restart    # apply config/config.json edits
-make snapshot   # sync from the mainnet snapshot instead of genesis
-make snapshot-up   # sync from the mainnet snapshot instead of genesis and start the node
+make snapshot   # restore root chain + all added nested chains from snapshots (concurrent) and start them
+make snapshot-up   # same as snapshot, then also bring up monitoring
 make add-nested-chain CHAIN_ID=29            # assemble a nested chain's files (see below)
 make add-nested-chain-snapshot CHAIN_ID=29   # assemble + restore its snapshot + start it
 make down       # stop everything
@@ -147,9 +151,10 @@ automatically.
 **Starting from a snapshot** (`add-nested-chain-snapshot`) assembles the files if
 needed, then reuses `scripts/snapshot.sh` to restore the chain's snapshot from
 `https://public-snapshots.app.canopynetwork.org/chain/<id>` into `data/chain-<id>/canopy`
-and start the container. The snapshot only ever touches the db dir, so the shared
-`keystore.json`/`validator_key.json` are never overwritten. The root chain's own
-snapshot (`make snapshot`) is unaffected.
+and start the container. The snapshot only ever touches that chain's db dir, so the
+shared `keystore.json`/`validator_key.json` are never overwritten and the root chain
+and other nested chains are left untouched. (To restore everything at once instead,
+use `make snapshot`.)
 
 Both are idempotent: if `data/chain-<id>` already exists the files are reused, not
 re-fetched. To recreate a chain from scratch, remove `data/chain-<id>` and

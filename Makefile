@@ -53,10 +53,10 @@ chain-logs: ## Tail a single nested chain's logs (CHAIN_ID=29)
 status: ## Show container status
 	$(FULL_COMPOSE) $(CHAIN_FLAGS) ps
 
-snapshot: ## Download mainnet snapshots into data/ (stops nodes first)
+snapshot: ## Restore root chain + every added nested chain from snapshots (concurrent download) and start them
 	./scripts/snapshot.sh
 
-snapshot-up: snapshot up ## Download mainnet snapshots into data/ and start nodes
+snapshot-up: snapshot up ## Same as snapshot, then also bring up monitoring
 
 add-nested-chain: ## Add a nested chain's files only; start with 'make up' (CHAIN_ID=29)
 	./scripts/add-nested-chain.sh "$(CHAIN_ID)" files
