@@ -98,12 +98,19 @@ read -rp "This wipes the db dirs above. Continue? [y/N]: " ok
 # Stop everything first (ignore services that aren't running yet).
 docker compose "${compose_flags[@]}" stop "${services[@]}" || true
 
-# ---- concurrent downloads --------------------------------------------------
+# ---- concurrent downloads (with per-chain progress) ------------------------
+# `dot:giga` prints progress as whole lines (percentage + speed) rather than a
+# carriage-return bar, so prefixing with the chain name stays readable even when
+# several downloads interleave. The subshell + PIPESTATUS makes `wait` below see
+# wget's real exit status (not sed's).
 echo "==== downloading ${#urls[@]} snapshots concurrently ===="
 pids=()
 for i in "${!urls[@]}"; do
-	echo "  -> ${services[$i]}: ${urls[$i]}"
-	download_snapshot "${urls[$i]}" "${tmps[$i]}" -q &
+	(
+		wget --progress=dot:giga -O "${tmps[$i]}" "${urls[$i]}" 2>&1 \
+			| sed -u "s/^/[${services[$i]}] /"
+		exit "${PIPESTATUS[0]}"
+	) &
 	pids+=("$!")
 done
 fail=0
