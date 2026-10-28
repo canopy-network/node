@@ -55,6 +55,8 @@ if [[ -n "${SNAPSHOT_SERVICE:-}" ]]; then
 		[[ "$ok" == [Yy] ]] || exit 0
 	fi
 
+	# Stop the service if it happens to be running, so wiping its db dir is safe.
+	# We deliberately do NOT start it afterwards -- `make up` starts the chain.
 	compose stop "$SNAPSHOT_SERVICE" || true
 	tmp="snapshot.$SNAPSHOT_SERVICE.tar.gz"
 	echo "==== downloading snapshot ($SNAPSHOT_SERVICE) ===="
@@ -62,8 +64,7 @@ if [[ -n "${SNAPSHOT_SERVICE:-}" ]]; then
 	echo "==== extracting snapshot ($SNAPSHOT_SERVICE) ===="
 	extract_into "$tmp" "$DATA_DIR" "$SNAPSHOT_SERVICE"
 	rm -f "$tmp"
-	compose up -d "$SNAPSHOT_SERVICE"
-	echo "==== $SNAPSHOT_SERVICE restarted from snapshot ===="
+	echo "==== $SNAPSHOT_SERVICE snapshot restored (not started; run 'make up') ===="
 	exit 0
 fi
 

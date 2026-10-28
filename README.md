@@ -105,7 +105,7 @@ make restart    # apply config/config.json edits
 make snapshot   # restore root chain + all added nested chains from snapshots (concurrent) and start them
 make snapshot-up   # same as snapshot, then also bring up monitoring
 make add-nested-chain CHAIN_ID=29            # assemble a nested chain's files (see below)
-make add-nested-chain-snapshot CHAIN_ID=29   # assemble + restore its snapshot + start it
+make add-nested-chain-snapshot CHAIN_ID=29   # assemble + restore its snapshot (start with 'make up')
 make down       # stop everything
 ```
 
@@ -121,7 +121,7 @@ in this stack. Two targets, both backed by `scripts/add-nested-chain.sh`:
 
 ```bash
 make add-nested-chain           CHAIN_ID=29   # assemble files only (does NOT start)
-make add-nested-chain-snapshot  CHAIN_ID=29   # assemble (if needed) + restore snapshot + start
+make add-nested-chain-snapshot  CHAIN_ID=29   # assemble (if needed) + restore snapshot (does NOT start)
 ```
 
 **Assembling the files** (`add-nested-chain`) only prepares the chain; it never
@@ -148,13 +148,15 @@ starts a container:
 monitoring). These targets pick up every `docker-compose.chain-*.yml`
 automatically.
 
-**Starting from a snapshot** (`add-nested-chain-snapshot`) assembles the files if
+**Restoring a snapshot** (`add-nested-chain-snapshot`) assembles the files if
 needed, then reuses `scripts/snapshot.sh` to restore the chain's snapshot from
-`https://public-snapshots.app.canopynetwork.org/chain/<id>` into `data/chain-<id>/canopy`
-and start the container. The snapshot only ever touches that chain's db dir, so the
-shared `keystore.json`/`validator_key.json` are never overwritten and the root chain
-and other nested chains are left untouched. (To restore everything at once instead,
-use `make snapshot`.)
+`https://public-snapshots.app.canopynetwork.org/chain/<id>` into `data/chain-<id>/canopy`.
+It does **not** start the chain — like `add-nested-chain`, it only prepares the
+data; start it (and every other added chain) afterwards with `make up`. The
+snapshot only ever touches that chain's db dir, so the shared
+`keystore.json`/`validator_key.json` are never overwritten and the root chain and
+other nested chains are left untouched. (To restore *and* start everything at once
+instead, use `make snapshot`.)
 
 Both are idempotent: if `data/chain-<id>` already exists the files are reused, not
 re-fetched. To recreate a chain from scratch, remove `data/chain-<id>` and

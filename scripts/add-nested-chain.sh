@@ -243,14 +243,6 @@ warn_missing_env() {
 	echo
 }
 
-# ---- warn (don't fail) if the root chain isn't running --------------------
-warn_if_root_down() {
-	if ! docker ps --format '{{.Names}}' | grep -qx node; then
-		echo "note: the root chain container 'node' is not running -- start it with 'make up'."
-		echo "      The nested chain will keep retrying until the root chain is reachable."
-	fi
-}
-
 # ---- obtain the files ------------------------------------------------------
 if [[ -d "$CHAIN_DIR" ]]; then
 	echo "using existing data/chain-$CHAIN_ID (not re-fetching)."
@@ -272,24 +264,26 @@ case "$MODE" in
 		echo "Start the root chain + every added nested chain with:"
 		echo "  make up        # node + monitoring"
 		echo "  make node-up   # node only"
-		echo "Or restore this chain from its snapshot and start it with:"
+		echo "Or restore this chain's snapshot first (then start it with 'make up'):"
 		echo "  make add-nested-chain-snapshot CHAIN_ID=$CHAIN_ID"
 		;;
 	snapshot)
 		warn_missing_env
-		warn_if_root_down
 		echo "==== restoring chain-$CHAIN_ID from snapshot ===="
 		# Reuse the existing snapshot script, pointed at this chain's db dir and
-		# its own compose service. It stops the service (noop if not yet up),
-		# wipes/extracts the db dir, and starts the service. keystore.json and
-		# validator_key.json live at the data dir root, outside the db dir, so
-		# they are never touched.
+		# its own compose service. It stops the service (noop if not yet up) and
+		# wipes/extracts the db dir, but does NOT start the chain -- that's done
+		# by 'make up'. keystore.json and validator_key.json live at the data dir
+		# root, outside the db dir, so they are never touched.
 		SNAPSHOT_URL="$SNAPSHOT_BASE/$CHAIN_ID" \
 		SNAPSHOT_DATA_DIR="data/chain-$CHAIN_ID/$(jq -r '.dbName // "canopy"' "$CHAIN_DIR/config.json")" \
 		SNAPSHOT_SERVICE="chain-$CHAIN_ID" \
 		SNAPSHOT_COMPOSE_FILES="-f docker-compose.yml -f $COMPOSE_BASENAME" \
 			"$SCRIPT_DIR/snapshot.sh"
 		echo "==== done ===="
-		echo "Logs: docker compose -f docker-compose.yml -f $COMPOSE_BASENAME logs -f chain-$CHAIN_ID"
+		echo "Snapshot restored; nothing started."
+		echo "Start the root chain + every added nested chain with:"
+		echo "  make up        # node + monitoring"
+		echo "  make node-up   # node only"
 		;;
 esac
