@@ -79,11 +79,15 @@ Sync from a mainnet snapshot instead of genesis. Copy `scripts/snapshot.sh` to t
 SNAPSHOT_URL=<url> ./scripts/snapshot.sh
 ```
 
-This stops the node, wipes `data/canopy`, downloads and extracts the snapshot, then restarts the
-node. `SNAPSHOT_URL` can also come from `.env` if it's already in place.
+Run plainly (`make snapshot`), it restores the **root chain** (`SNAPSHOT_URL` -> `data/canopy`)
+**and every added nested chain** (`docker-compose.chain-*.yml`) from their snapshots: it stops the
+services, downloads all snapshots **concurrently**, wipes & extracts each chain's db dir, then
+starts them all together. `SNAPSHOT_URL` (root chain) can come from `.env`; nested-chain snapshots
+come from `https://public-snapshots.app.canopynetwork.org/chain/<id>`. Only each chain's db dir is
+wiped, so the shared `keystore.json`/`validator_key.json` are preserved.
 
-You can also run `make snapshot-up` to start the nodes after the snapshot is applied (see
-[Operations](#operations)).
+You can also run `make snapshot-up` to additionally bring up monitoring after the snapshots are
+applied (see [Operations](#operations)).
 
 ## Operations
 
@@ -98,10 +102,65 @@ make up         # start everything
 make logs       # follow node logs
 make status     # show container status
 make restart    # apply config/config.json edits
-make snapshot   # sync from the mainnet snapshot instead of genesis
-make snapshot-up   # sync from the mainnet snapshot instead of genesis and start the node
+make snapshot   # restore root chain + all added nested chains from snapshots (concurrent) and start them
+make snapshot-up   # same as snapshot, then also bring up monitoring
+make add-nested-chain CHAIN_ID=29            # assemble a nested chain's files (see below)
+make add-nested-chain-snapshot CHAIN_ID=29   # assemble + restore its snapshot (start with 'make up')
 make down       # stop everything
 ```
+
+`make up`, `make node-up`, `make down`, and `make status` automatically include
+every `docker-compose.chain-*.yml` that `make add-nested-chain` has generated, so
+the root chain and all added nested chains start/stop/report together.
+
+## Nested chains
+
+A node can run extra ("nested") chains alongside the root chain. Each nested
+chain runs as its own container that connects to the root chain already running
+in this stack. Two targets, both backed by `scripts/add-nested-chain.sh`:
+
+```bash
+make add-nested-chain           CHAIN_ID=29   # assemble files only (does NOT start)
+make add-nested-chain-snapshot  CHAIN_ID=29   # assemble (if needed) + restore snapshot (does NOT start)
+```
+
+**Assembling the files** (`add-nested-chain`) only prepares the chain; it never
+starts a container:
+
+1. Fetches the chain's `genesis.json` and `config.json` from the Canopy
+   chain-data API (`https://api.app.canopynetwork.org/api/v1`).
+2. Fetches the chain's plugin files if it has any (a `404` means it has none and
+   is skipped silently) and writes them where the chain expects them. If the
+   plugin needs env vars, they are documented in `.env.example` and you are
+   prompted to add them to your `.env`.
+3. Writes the fetched `config.json` verbatim, including its `rootChain` entry as
+   served by the launchpad (it is not rewritten to point at this node).
+4. Reuses this node's `config/keystore.json` and `config/validator_key.json`
+   verbatim (the node identity is identical across every chain). Run
+   `make gen-key` first if you don't have them yet.
+5. Writes everything under `data/chain-<id>/` and generates
+   `docker-compose.chain-<id>.yml`, using the Docker image that matches the
+   chain's plugin language (`canopynetwork/canopy-plugin-<lang>:latest`,
+   defaulting to `go`).
+
+**Starting from genesis** — once the files are assembled, start the whole stack
+(root chain + every added nested chain) with `make up` (or `make node-up` for no
+monitoring). These targets pick up every `docker-compose.chain-*.yml`
+automatically.
+
+**Restoring a snapshot** (`add-nested-chain-snapshot`) assembles the files if
+needed, then reuses `scripts/snapshot.sh` to restore the chain's snapshot from
+`https://public-snapshots.app.canopynetwork.org/chain/<id>` into `data/chain-<id>/canopy`.
+It does **not** start the chain — like `add-nested-chain`, it only prepares the
+data; start it (and every other added chain) afterwards with `make up`. The
+snapshot only ever touches that chain's db dir, so the shared
+`keystore.json`/`validator_key.json` are never overwritten and the root chain and
+other nested chains are left untouched. (To restore *and* start everything at once
+instead, use `make snapshot`.)
+
+Both are idempotent: if `data/chain-<id>` already exists the files are reused, not
+re-fetched. To recreate a chain from scratch, remove `data/chain-<id>` and
+`docker-compose.chain-<id>.yml` first.
 
 Upgrading canopy: `make pull && make up` (or `docker compose pull node && docker compose up -d`).
 The node also self-updates in place via canopy's auto-update coordinator when `autoUpdate` is
@@ -114,5 +173,5 @@ docker-compose.yml            # node (+ keygen, run once via `docker compose run
 docker-compose.monitoring.yml # caddy + monitoring stack (configs inlined via `configs:`) 
 config/                       # node config + genesis (bind-mounted into the node)
 data/                         # runtime state (peers, chain db), gitignored
-scripts/                      # snapshot.sh
+scripts/                      # snapshot.sh, add-nested-chain.sh
 ```
